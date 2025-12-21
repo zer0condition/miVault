@@ -89,6 +89,27 @@ std::string get_file_size_str(const std::string& path) {
     return std::to_string(size / (1024LL * 1024 * 1024)) + " GB";
 }
 
+std::string get_extension(const std::string& path) {
+    size_t dot = path.find_last_of('.');
+    if (dot == std::string::npos) return "";
+    return path.substr(dot);
+}
+
+std::string get_directory(const std::string& path) {
+    size_t slash1 = path.find_last_of('/');
+    size_t slash2 = path.find_last_of('\\');
+    size_t last_slash = max(slash1, slash2);
+    if (last_slash == std::string::npos) return "";
+    return path.substr(0, last_slash + 1);
+}
+
+std::string get_filename_no_ext(const std::string& path) {
+    std::string fname = get_filename_no_path(path);
+    size_t dot = fname.find_last_of('.');
+    if (dot == std::string::npos) return fname;
+    return fname.substr(0, dot);
+}
+
 bool embed_file(const std::string& cover_file, const std::string& input_file, const std::string& output_file) {
     if (!has_supported_extension(cover_file)) return false;
 
@@ -307,7 +328,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         hOutputLabel = CreateWindowA("STATIC", "Output File:", WS_CHILD | WS_VISIBLE,
             10, y, 120, 20, hwnd, NULL, GetModuleHandle(NULL), NULL);
         y += 22;
-        hOutputEdit = CreateWindowA("EDIT", "output.mp3", WS_CHILD | WS_VISIBLE | WS_BORDER,
+        hOutputEdit = CreateWindowA("EDIT", "", WS_CHILD | WS_VISIBLE | WS_BORDER,
             10, y, 310, 25, hwnd, NULL, GetModuleHandle(NULL), NULL);
         hOutputBtn = CreateWindowA("BUTTON", "Browse", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
             325, y, 90, 25, hwnd, (HMENU)12, GetModuleHandle(NULL), NULL);
@@ -369,6 +390,15 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             if (!f.empty()) {
                 SetWindowTextA(hCoverEdit, f.c_str());
                 log_msg("[+] Cover: " + get_filename_no_path(f));
+
+                // Auto-generate output path with same extension
+                std::string dir = get_directory(f);
+                std::string name_no_ext = get_filename_no_ext(f);
+                std::string ext = get_extension(f);
+                std::string output_path = dir + name_no_ext + "_vault" + ext;
+
+                SetWindowTextA(hOutputEdit, output_path.c_str());
+                log_msg("[+] Output: " + get_filename_no_path(output_path));
             }
         }
         else if (id == 11) {
@@ -409,7 +439,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         else if (id == 21) {
             SetWindowTextA(hCoverEdit, "");
             SetWindowTextA(hPayloadEdit, "");
-            SetWindowTextA(hOutputEdit, "output.mp3");
+            SetWindowTextA(hOutputEdit, "");
         }
         else if (id == 30) {
             std::string f = browse_file(hwnd);
